@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeautyShop - Votre Beauté, Notre Passion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: #fff;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Navigation Premium */
+        header {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            padding: 20px 50px;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ff6b9d, #c06c84);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            font-size: 2.5rem;
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 40px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.05rem;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .nav-links a::before {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background: linear-gradient(135deg, #ff6b9d, #c06c84);
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #ff6b9d;
+        }
+
+        .nav-links a:hover::before {
+            width: 100%;
+        }
+
+        /* Hero Ultra Premium */
+        .hero {
+            position: relative;
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ffeef5 0%, #fff0f5 100%);
+            overflow: hidden;
+        }
+
+        .hero-bg-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: floatShape 15s ease-in-out infinite;
+        }
+
+        .shape:nth-child(1) {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #ffd1dc, transparent);
+            top: -100px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+
+        .shape:nth-child(2) {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #ffb6c1, transparent);
+            bottom: -80px;
+            right: 10%;
+            animation-delay: 3s;
+        }
+
+        .shape:nth-child(3) {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, #dda0dd, transparent);
+            top: 30%;
+            right: -80px;
+            animation-delay: 6s;
+        }
+
+        @keyframes floatShape {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(50px, -50px) scale(1.1);
+            }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 1000px;
+            padding: 0 20px;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff6b9d, #c06c84);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            animation: fadeInDown 1s ease-out;
+            box-shadow: 0 10px 30px rgba(255, 107, 157, 0.3);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-title {
+            font-size: 5.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ff6b9d, #c06c84, #ff6b9d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 25px;
+            line-height: 1.2;
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-subtitle {
+            font-size: 1.6rem;
+            color: #666;
+            margin-bottom: 45px;
+            animation: fadeInUp 1s ease-out 0.4s both;
+            line-height: 1.6;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 1s ease-out 0.6s both;
+        }
+
+        .btn {
+            padding: 20px 50px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            text-decoration: none;
+            border-radius: 50px;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 400px;
+            height: 400px;
+        }
+
+        .btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b9d, #c06c84);
+            color: white;
+            box-shadow: 0 15px 40px rgba(255, 107, 157, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 50px rgba(255, 107, 157, 0.6);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #ff6b9d;
+            border: 3px solid #ff6b9d;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: #ff6b9d;
+            color: white;
+            transform: translateY(-5px);
+        }
+
+        /* Stats Section */
+        .stats {
+            background: linear-gradient(135deg, #ff6b9d, #c06c84);
+            padding: 60px 50px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 40px;
+        }
+
+        .stat-box {
+            text-align: center;
+            color: white;
+        }
+
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Features Premium */
+        .features {
+            padding: 120px 50px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .section-subtitle {
+            color: #ff6b9d;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .section-desc {
+            font-size: 1.3rem;
+            color: #666;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 40px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 60px 40px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.08);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 107, 157, 0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .feature-card:hover::before {
+            left: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-20px);
+            box-shadow: 0 25px 70px rgba(255, 107, 157, 0.25);
+        }
+
+        .feature-icon {
+            font-size: 5rem;
+            margin-bottom: 30px;
+            display: inline-block;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        .feature-card:nth-child(2) .feature-icon {
+            animation-delay: 0.3s;
+        }
+
+        .feature-card:nth-child(3) .feature-icon {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .feature-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .feature-desc {
+            font-size: 1.15rem;
+            color: #666;
+            line-height: 1.8;
+        }
+
+        /* Products Showcase */
+        .products-showcase {
+            padding: 120px 50px;
+            background: linear-gradient(135deg, #ffeef5 0%, #fff0f5 100%);
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            box-shadow: 0 30px 70px rgba(255, 107, 157, 0.3);
+        }
+
+        .product-image {
+            height: 320px;
+            background: linear-gradient(135deg, #ffd1dc, #ffb6c1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 200%; }
+        }
+
+        .product-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ff6b9d;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            box-shadow: 0 5px 20px rgba(255, 107, 157, 0.5);
+        }
+
+        .favorite-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .favorite-btn:hover {
+            transform: scale(1.2);
+            background: #ff6b9d;
+        }
+
+        .product-info {
+            padding: 30px;
+        }
+
+        .product-category {
+            color: #ff6b9d;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .product-name {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .product-rating {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .product-price {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #ff6b9d;
+            margin-bottom: 20px;
+        }
+
+        .product-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #ff6b9d, #c06c84);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .product-btn:hover {
+            background: linear-gradient(135deg, #e55a8a, #b05a74);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 107, 157, 0.4);
+        }
+
+        /* Newsletter Premium */
+        .newsletter {
+            padding: 100px 50px;
+            background: linear-gradient(135deg, #ff6b9d 0%, #c06c84 100%);
+            text-align: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .newsletter::before {
+            content: '💌';
+            position: absolute;
+            font-size: 25rem;
+            opacity: 0.05;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .newsletter-content {
+            position: relative;
+            z-index: 2;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .newsletter h2 {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+
+        .newsletter p {
+            font-size: 1.3rem;
+            margin-bottom: 45px;
+            opacity: 0.95;
+        }
+
+        .newsletter-form {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .newsletter-input {
+            flex: 1;
+            min-width: 320px;
+            padding: 20px 30px;
+            border-radius: 50px;
+            border: none;
+            font-size: 1.1rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .newsletter-btn {
+            padding: 20px 50px;
+            background: white;
+            color: #ff6b9d;
+            border: none;
+            border-radius: 50px;
+            font-weight: 900;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .newsletter-btn:hover {
+            transform: scale(1.05) translateY(-3px);
+            box-shadow: 0 15px 40px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            background: #1a1a1a;
+            color: white;
+            padding: 50px;
+            text-align: center;
+        }
+
+        footer p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 968px) {
+            header {
+                padding: 20px;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .nav-links {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+
+            .hero-title {
+                font-size: 3rem;
+            }
+
+            .section-title {
+                font-size: 2.5rem;
+            }
+
+            .stats {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <span class="logo-icon">💄</span>
+                <span>BeautyShop</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="about.html">À propos</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="contact.html">Contact</a></li>
+                <li><a href="login.html">Login</a></li>
+                <li><a href="signup.html">Sign up</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="hero-bg-shapes">
+            <div class="shape"></div>
+            <div class="shape"></div>
+            <div class="shape"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge">✨ Collection Printemps 2024</div>
+            <h1 class="hero-title">Révélez Votre<br>Beauté Naturelle</h1>
+            <p class="hero-subtitle">
+                Découvrez notre sélection exclusive de cosmétiques haut de gamme,<br>
+                formulés avec des ingrédients naturels pour sublimer votre beauté
+            </p>
+            <div class="cta-buttons">
+                <a href="services.html" class="btn btn-primary"><span>Découvrir nos services</span></a>
+                <a href="contact.html" class="btn btn-secondary"><span>Prendre rendez-vous</span></a>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats">
+        <div class="stat-box">
+            <div class="stat-number">10K+</div>
+            <div class="stat-label">Clientes Satisfaites</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">500+</div>
+            <div class="stat-label">Produits Premium</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">15+</div>
+            <div class="stat-label">Années d'Expérience</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">99%</div>
+            <div class="stat-label">Recommandations</div>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="section-header">
+            <div class="section-subtitle">Nos Engagements</div>
+            <h2 class="section-title">Pourquoi Choisir BeautyShop ?</h2>
+            <p class="section-desc">
+                Nous mettons tout en œuvre pour vous offrir la meilleure expérience beauté
+            </p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">✨</div>
+                <h3 class="feature-title">Qualité Premium</h3>
+                <p class="feature-desc">
+                    Des produits haut de gamme soigneusement sélectionnés auprès des meilleures marques internationales
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌸</div>
+                <h3 class="feature-title">100% Naturel</h3>
+                <p class="feature-desc">
+                    Formules enrichies d'ingrédients naturels et bio, sans parabènes ni substances nocives
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💝</div>
+                <h3 class="feature-title">Livraison Gratuite</h3>
+                <p class="feature-desc">
+                    Profitez de la livraison offerte dès 50€ d'achat et recevez vos produits en 48h
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="products-showcase">
+        <div class="section-header">
+            <div class="section-subtitle">Best Sellers</div>
+            <h2 class="section-title">Nos Produits Vedettes</h2>
+            <p class="section-desc">
+                Découvrez nos produits les plus plébiscités par nos clientes
+            </p>
+        </div>
+        <div class="products-grid">
+            <div class="product-card">
+                <div class="product-image">
+                    💄
+                    <span class="product-badge">Nouveau</span>
+                    <div class="favorite-btn">🤍</div>
+                </div>
+                <div class="product-info">
+                    <div class="product-category">Maquillage</div>
+                    <h3 class="product-name">Rouge à Lèvres Mat Velours</h3>
+                    <div class="product-rating">⭐⭐⭐⭐⭐ (247)</div>
+                    <p class="product-price">24,90 €</p>
+                    <button class="product-btn">Ajouter au panier</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-image" style="background: linear-gradient(135deg, #ffdab9, #ffb6c1);">
+                    🌸
+                    <span class="product-badge" style="background: #e74c3c;">-20%</span>
+                    <div class="favorite-btn">🤍</div>
+                </div>
+                <div class="product-info">
+                    <div class="product-category">Yeux</div>
+                    <h3 class="product-name">Palette Fard à Paupières Rose Gold</h3>
+                    <div class="product-rating">⭐⭐⭐⭐⭐ (189)</div>
+                    <p class="product-price">39,90 €</p>
+                    <button class="product-btn">Ajouter au panier</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-image" style="background: linear-gradient(135deg, #e6e6fa, #dda0dd);">
+                    ✨
+                    <span class="product-badge" style="background: #f39c12;">Best Seller</span>
+                    <div class="favorite-btn">🤍</div>
+                </div>
+                <div class="product-info">
+                    <div class="product-category">Soins</div>
+                    <h3 class="product-name">Sérum Visage Éclat Anti-Âge</h3>
+                    <div class="product-rating">⭐⭐⭐⭐⭐ (312)</div>
+                    <p class="product-price">54,90 €</p>
+                    <button class="product-btn">Ajouter au panier</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="newsletter">
+        <div class="newsletter-content">
+            <h2>Restez Informée de nos Nouveautés ! 💌</h2>
+            <p>
+                Inscrivez-vous à notre newsletter et recevez en exclusivité nos offres spéciales,
+                conseils beauté et nouveaux produits
+            </p>
+            <form class="newsletter-form">
+                <input type="email" class="newsletter-input" placeholder="Votre adresse email" required>
+                <button type="submit" class="newsletter-btn">S'abonner</button>
+            </form>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2024 BeautyShop. Tous droits réservés. 💄 Fait avec amour pour votre beauté.</p>
+    </footer>
+</body>
+</html>
