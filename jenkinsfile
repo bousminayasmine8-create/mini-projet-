@@ -1,0 +1,78 @@
+pipeline {
+    agent { label 'VM_DEV' }
+
+    environment {
+        MAVEN_HOME = "/usr/share/maven"
+        JAVA_HOME  = "/usr/lib/jvm/java-17-openjdk-amd64"
+        SONAR_TOKEN = credentials('mini-projet-token') // token SonarQube
+        DEPLOY_USER = 'devops'                          // utilisateur sur VM_DEV
+        DEPLOY_HOST = '192.168.100.130'                // IP de VM_DEV
+        DEPLOY_PATH = '/home/devops/jenkins/app'       // chemin où déployer l'appli
+        SSH_KEY_CREDENTIALS = 'vm-devops'             // clé SSH stockée dans Jenkins
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://ton-repo-git.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn clean compile"
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn test"
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh "${MAVEN_HOME}/bin/mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
+                }
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn package"
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sshagent([SSH_KEY_CREDENTIALS]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} 'mkdir -p ${DEPLOY_PATH}'
+                        scp target/*.jar ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
+                        ssh ${DEPLOY_USER}@${DEPLOY_HOST} 'cd ${DEPLOY_PATH} && java -jar *.jar > app.log 2>&1 &'
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline CI/CD terminé avec succès ! L’application est déployée.'
+        }
+        failure {
+            echo 'Le pipeline a échoué.'
+        }
+    }
+}
