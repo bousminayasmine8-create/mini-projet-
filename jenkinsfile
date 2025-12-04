@@ -33,11 +33,14 @@ pipeline {
 
         stage('SonarQube Analysis') {
     steps {
-        withSonarQubeEnv('SonarQube') {
-            sh "${MAVEN_HOME}/bin/mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
+        withCredentials([string(credentialsId: 'mini-projet-token', variable: 'SONAR_TOKEN')]) {
+            withSonarQubeEnv('SonarQube') {
+                sh "${MAVEN_HOME}/bin/mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
+            }
         }
     }
 }
+
 
         stage('Package') {
             steps {
