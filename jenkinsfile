@@ -5,7 +5,6 @@ pipeline {
         MAVEN_HOME = "/usr/share/maven"
         JAVA_HOME  = "/usr/lib/jvm/java-17-openjdk-amd64"
         PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
-        SONAR_HOST_URL = "http://localhost:9000"  // ou http://127.0.0.1:9000
     }
     
     stages {
@@ -38,20 +37,6 @@ pipeline {
             }
         }
         
-        stage('SonarQube Analysis') {
-            steps {
-                echo '🔍 Running SonarQube analysis...'
-                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    sh """
-                        mvn sonar:sonar \
-                        -Dsonar.projectKey=mini-projet \
-                        -Dsonar.host.url=${SONAR_HOST_URL} \
-                        -Dsonar.login=\${SONAR_TOKEN}
-                    """
-                }
-            }
-        }
-        
         stage('Package') {
             steps {
                 echo '📦 Packaging application...'
@@ -62,7 +47,7 @@ pipeline {
                     archiveArtifacts artifacts: '**/target/*.war', 
                                    fingerprint: true,
                                    allowEmptyArchive: true
-                    echo '✅ Artifact archived successfully!'
+                    echo '✅ Artifact créé avec succès !'
                 }
             }
         }
@@ -70,14 +55,14 @@ pipeline {
     
     post {
         success {
-            echo '✅ ============================================'
-            echo '✅ Pipeline CI terminé avec succès !'
-            echo '✅ ============================================'
+            echo '✅ =========================================='
+            echo '✅ Pipeline terminé avec succès !'
+            echo '✅ =========================================='
         }
         failure {
-            echo '❌ ============================================'
-            echo '❌ Le pipeline a échoué.'
-            echo '❌ ============================================'
+            echo '❌ =========================================='
+            echo '❌ Le pipeline a échoué'
+            echo '❌ =========================================='
         }
     }
 }
