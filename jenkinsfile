@@ -7,8 +7,8 @@ pipeline {
         PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
         
         // Configuration Tomcat
-        TOMCAT_URL = "http://localhost:8080"
-        APP_NAME = "mini-projet"  // On déploie avec un nom simple
+        TOMCAT_URL = "http://192.168.100.130:8080"
+        APP_NAME = "mini-projet"
     }
     
     stages {
@@ -51,7 +51,7 @@ pipeline {
                             echo '✅ SonarQube accessible !'
                             
                             withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                                timeout(time: 5, unit: 'MINUTES') {
+                                timeout(time: 3, unit: 'MINUTES') {
                                     sh """
                                         mvn sonar:sonar \
                                         -Dsonar.projectKey=mini-projet \
@@ -99,13 +99,10 @@ pipeline {
                         usernameVariable: 'TOMCAT_USER', 
                         passwordVariable: 'TOMCAT_PASS'
                     )]) {
-                        // Undeploy les anciennes versions
                         sh """
-                            # Undeploy avec le nom simple
                             curl -s --user \${TOMCAT_USER}:\${TOMCAT_PASS} \
                             "${TOMCAT_URL}/manager/text/undeploy?path=/${APP_NAME}" || true
                             
-                            # Undeploy avec la version (au cas où)
                             curl -s --user \${TOMCAT_USER}:\${TOMCAT_PASS} \
                             "${TOMCAT_URL}/manager/text/undeploy?path=/mini-projet-1.0.0-SNAPSHOT" || true
                         """
@@ -156,10 +153,9 @@ pipeline {
             steps {
                 echo '🔍 Vérification du déploiement...'
                 script {
-                    echo '⏳ Attente du démarrage de l\'application (10 secondes)...'
+                    echo '⏳ Attente du démarrage (10 secondes)...'
                     sleep(time: 10, unit: 'SECONDS')
                     
-                    // Test de l'application
                     def statusCode = sh(
                         script: "curl -s -o /dev/null -w '%{http_code}' ${TOMCAT_URL}/${APP_NAME}/",
                         returnStdout: true
@@ -170,8 +166,7 @@ pipeline {
                     if (statusCode == '200' || statusCode == '302' || statusCode == '303') {
                         echo '✅ Application accessible et fonctionnelle !'
                     } else {
-                        echo "⚠️ L'application retourne le code HTTP ${statusCode}"
-                        echo "💡 Vérifiez manuellement: ${TOMCAT_URL}/${APP_NAME}/"
+                        echo "⚠️ Code HTTP ${statusCode}"
                     }
                 }
             }
@@ -189,7 +184,7 @@ pipeline {
             echo "   ${TOMCAT_URL}/${APP_NAME}/"
             echo "   ${TOMCAT_URL}/${APP_NAME}/about.html"
             echo ''
-            echo '📊 Autres liens utiles:'
+            echo '📊 Autres liens:'
             echo "   - SonarQube: http://localhost:9000/dashboard?id=mini-projet"
             echo "   - Tomcat Manager: ${TOMCAT_URL}/manager/html"
             echo "   - Jenkins: http://192.168.100.130:8081/job/projet/"
@@ -201,19 +196,10 @@ pipeline {
             echo '❌ ================================================'
             echo '❌         ÉCHEC DU DÉPLOIEMENT'
             echo '❌ ================================================'
-            echo ''
-            echo '🔍 Vérifications à faire:'
-            echo '   1. Tomcat fonctionne: sudo systemctl status tomcat'
-            echo '   2. Logs Tomcat: sudo tail -f /opt/tomcat/logs/catalina.out'
-            echo "   3. Manager: ${TOMCAT_URL}/manager/html"
-            echo "   4. Credentials Jenkins: 'tomcat-credentials'"
-            echo ''
         }
         always {
             echo ''
-            echo '📊 Informations du build:'
-            echo "   - Build #${BUILD_NUMBER}"
-            echo "   - Workspace: ${WORKSPACE}"
+            echo '📊 Build #${BUILD_NUMBER}'
         }
     }
 }
