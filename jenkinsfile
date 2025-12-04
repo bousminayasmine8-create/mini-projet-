@@ -1,5 +1,6 @@
 pipeline {
-    agent { label 'VM_DEV' }
+    agent any
+
 
     environment {
         MAVEN_HOME = "/usr/share/maven"
@@ -9,7 +10,7 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps {
+        steps {
                 git branch: 'main', url: 'https://github.com/bousminayasmine8-create/mini-projet-.git'
             }
         }
