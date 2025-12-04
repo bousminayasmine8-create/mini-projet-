@@ -1,16 +1,15 @@
 pipeline {
     agent any
 
-
     environment {
         MAVEN_HOME = "/usr/share/maven"
         JAVA_HOME  = "/usr/lib/jvm/java-17-openjdk-amd64"
-        SONAR_TOKEN = credentials('mini-projet-token') 
+        SONAR_TOKEN = credentials('mini-projet-token')
     }
 
     stages {
         stage('Checkout') {
-        steps {
+            steps {
                 git branch: 'main', url: 'https://github.com/bousminayasmine8-create/mini-projet-.git'
             }
         }
@@ -21,22 +20,21 @@ pipeline {
             }
         }
 
-       stage('Unit Tests') {
-    steps {
-        sh "${MAVEN_HOME}/bin/mvn test || true"
-    }
-    post {
-        always {
-           junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
+        stage('Unit Tests') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn test || true"
+            }
+            post {
+                always {
+                    junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
+                }
+            }
         }
-    }
-}
-
 
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                      sh "${MAVEN_HOME}/bin/mvn sonar:sonar -Dsonar.token=squ_a2b21ad78c687716ea63aef99505353b33e8f30d"
+                    sh "${MAVEN_HOME}/bin/mvn sonar:sonar -Dsonar.token=${SONAR_TOKEN}"
                 }
             }
         }
