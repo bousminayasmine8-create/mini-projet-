@@ -2,46 +2,46 @@ pipeline {
     agent any
 
     environment {
-        SONAR_TOKEN = credentials('mini-projet-token')
+        SONAR_TOKEN = credentials('jenkins-token') 
     }
 
     stages {
-
         stage('Checkout') {
             steps {
-                checkout scm
+                git 'https://github.com/bousminayasmine8-create/mini-projet-.git'
             }
         }
 
         stage('Build') {
             steps {
-                sh "mvn clean install -DskipTests"
-            }
-        }
-
-        stage('Unit Tests') {
-            steps {
-                sh "mvn test"
+                sh 'mvn clean package'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-               withSonarQubeEnv('mini-projet-sonarqube') {
-    sh 'mvn sonar:sonar'
-
+                withSonarQubeEnv('mini-projet-sonarqube') { // Nom de ton installation SonarQube dans Jenkins
+                    sh 'mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN} -Dsonar.projectKey=mini-projet -Dsonar.host.url=http://localhost:9000'
                 }
-
             }
         }
 
-        stage('Package') {
+        stage('Quality Gate') {
             steps {
-                sh "mvn package -DskipTests"
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
+    }
 
-    } 
-
-} 
+    post {
+        success {
+            echo 'Pipeline terminé avec succès.'
+        }
+        failure {
+            echo 'Pipeline échoué.'
+        }
+    }
+}
 
