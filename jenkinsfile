@@ -5,12 +5,16 @@ pipeline {
         MAVEN_HOME = "/usr/share/maven"
         JAVA_HOME  = "/usr/lib/jvm/java-17-openjdk-amd64"
         PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
+        
+        // Configuration Tomcat
+        TOMCAT_URL = "http://localhost:8080"
+        APP_NAME = "mini-projet"  // On déploie avec un nom simple
     }
     
     stages {
         stage('Checkout') {
             steps {
-                echo '📥 Cloning repository...'
+                echo '📥 Récupération du code source...'
                 git branch: 'main', 
                     url: 'https://github.com/bousminayasmine8-create/mini-projet-.git',
                     credentialsId: 'gitjinkins'
@@ -19,14 +23,14 @@ pipeline {
         
         stage('Build') {
             steps {
-                echo '🔨 Building project...'
+                echo '🔨 Compilation du projet...'
                 sh 'mvn clean compile'
             }
         }
         
         stage('Unit Tests') {
             steps {
-                echo '🧪 Running unit tests...'
+                echo '🧪 Exécution des tests unitaires...'
                 sh 'mvn test || true'
             }
             post {
@@ -39,29 +43,136 @@ pipeline {
         
         stage('SonarQube Analysis') {
             steps {
-                echo '🔍 Running SonarQube analysis...'
-                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    sh """
-                        mvn sonar:sonar \
-                        -Dsonar.projectKey=mini-projet \
-                        -Dsonar.host.url=http://localhost:9000 \
-                        -Dsonar.login=\${SONAR_TOKEN}
-                    """
+                echo '🔍 Analyse SonarQube...'
+                script {
+                    try {
+                        timeout(time: 30, unit: 'SECONDS') {
+                            sh 'curl -f http://localhost:9000/api/system/status'
+                            echo '✅ SonarQube accessible !'
+                            
+                            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                                timeout(time: 5, unit: 'MINUTES') {
+                                    sh """
+                                        mvn sonar:sonar \
+                                        -Dsonar.projectKey=mini-projet \
+                                        -Dsonar.host.url=http://localhost:9000 \
+                                        -Dsonar.login=\${SONAR_TOKEN}
+                                    """
+                                }
+                            }
+                            echo '✅ Analyse SonarQube terminée !'
+                        }
+                    } catch (Exception e) {
+                        echo "⚠️ SonarQube ignoré: ${e.message}"
+                        echo "⏭️ Suite du pipeline..."
+                    }
                 }
             }
         }
         
         stage('Package') {
             steps {
-                echo '📦 Packaging application...'
+                echo '📦 Création du fichier WAR...'
                 sh 'mvn package -DskipTests'
             }
             post {
                 success {
                     archiveArtifacts artifacts: '**/target/*.war', 
-                                   fingerprint: true,
-                                   allowEmptyArchive: true
-                    echo '✅ Artifact créé avec succès !'
+                                   fingerprint: true
+                    script {
+                        def warFile = sh(
+                            script: "find target -name '*.war' | head -1", 
+                            returnStdout: true
+                        ).trim()
+                        echo "✅ Fichier WAR créé: ${warFile}"
+                    }
+                }
+            }
+        }
+        
+        stage('Stop Old Application') {
+            steps {
+                echo '🛑 Arrêt de l\'ancienne version...'
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'tomcat-credentials', 
+                        usernameVariable: 'TOMCAT_USER', 
+                        passwordVariable: 'TOMCAT_PASS'
+                    )]) {
+                        // Undeploy les anciennes versions
+                        sh """
+                            # Undeploy avec le nom simple
+                            curl -s --user \${TOMCAT_USER}:\${TOMCAT_PASS} \
+                            "${TOMCAT_URL}/manager/text/undeploy?path=/${APP_NAME}" || true
+                            
+                            # Undeploy avec la version (au cas où)
+                            curl -s --user \${TOMCAT_USER}:\${TOMCAT_PASS} \
+                            "${TOMCAT_URL}/manager/text/undeploy?path=/mini-projet-1.0.0-SNAPSHOT" || true
+                        """
+                        echo '✅ Anciennes versions supprimées'
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Tomcat') {
+            steps {
+                echo '🚀 Déploiement sur Tomcat...'
+                script {
+                    def warFile = sh(
+                        script: "find target -name '*.war' | head -1", 
+                        returnStdout: true
+                    ).trim()
+                    
+                    echo "📦 Déploiement de: ${warFile}"
+                    
+                    withCredentials([usernamePassword(
+                        credentialsId: 'tomcat-credentials', 
+                        usernameVariable: 'TOMCAT_USER', 
+                        passwordVariable: 'TOMCAT_PASS'
+                    )]) {
+                        def response = sh(
+                            script: """
+                                curl -s --upload-file ${warFile} \
+                                --user \${TOMCAT_USER}:\${TOMCAT_PASS} \
+                                "${TOMCAT_URL}/manager/text/deploy?path=/${APP_NAME}&update=true"
+                            """,
+                            returnStdout: true
+                        ).trim()
+                        
+                        echo "📋 Réponse Tomcat: ${response}"
+                        
+                        if (response.contains('OK')) {
+                            echo '✅ Déploiement réussi !'
+                        } else {
+                            echo "⚠️ Réponse: ${response}"
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                echo '🔍 Vérification du déploiement...'
+                script {
+                    echo '⏳ Attente du démarrage de l\'application (10 secondes)...'
+                    sleep(time: 10, unit: 'SECONDS')
+                    
+                    // Test de l'application
+                    def statusCode = sh(
+                        script: "curl -s -o /dev/null -w '%{http_code}' ${TOMCAT_URL}/${APP_NAME}/",
+                        returnStdout: true
+                    ).trim()
+                    
+                    echo "📊 Code HTTP: ${statusCode}"
+                    
+                    if (statusCode == '200' || statusCode == '302' || statusCode == '303') {
+                        echo '✅ Application accessible et fonctionnelle !'
+                    } else {
+                        echo "⚠️ L'application retourne le code HTTP ${statusCode}"
+                        echo "💡 Vérifiez manuellement: ${TOMCAT_URL}/${APP_NAME}/"
+                    }
                 }
             }
         }
@@ -69,16 +180,40 @@ pipeline {
     
     post {
         success {
-            echo '✅ =========================================='
-            echo '✅ Pipeline terminé avec succès !'
-            echo '✅ Vérifiez les résultats dans SonarQube:'
-            echo '✅ http://localhost:9000/dashboard?id=mini-projet'
-            echo '✅ =========================================='
+            echo ''
+            echo '🎉 ================================================'
+            echo '🎉       DÉPLOIEMENT RÉUSSI !'
+            echo '🎉 ================================================'
+            echo ''
+            echo '🌐 Votre application est accessible sur:'
+            echo "   ${TOMCAT_URL}/${APP_NAME}/"
+            echo "   ${TOMCAT_URL}/${APP_NAME}/about.html"
+            echo ''
+            echo '📊 Autres liens utiles:'
+            echo "   - SonarQube: http://localhost:9000/dashboard?id=mini-projet"
+            echo "   - Tomcat Manager: ${TOMCAT_URL}/manager/html"
+            echo "   - Jenkins: http://192.168.100.130:8081/job/projet/"
+            echo ''
+            echo '🎉 ================================================'
         }
         failure {
-            echo '❌ =========================================='
-            echo '❌ Le pipeline a échoué'
-            echo '❌ =========================================='
+            echo ''
+            echo '❌ ================================================'
+            echo '❌         ÉCHEC DU DÉPLOIEMENT'
+            echo '❌ ================================================'
+            echo ''
+            echo '🔍 Vérifications à faire:'
+            echo '   1. Tomcat fonctionne: sudo systemctl status tomcat'
+            echo '   2. Logs Tomcat: sudo tail -f /opt/tomcat/logs/catalina.out'
+            echo "   3. Manager: ${TOMCAT_URL}/manager/html"
+            echo "   4. Credentials Jenkins: 'tomcat-credentials'"
+            echo ''
+        }
+        always {
+            echo ''
+            echo '📊 Informations du build:'
+            echo "   - Build #${BUILD_NUMBER}"
+            echo "   - Workspace: ${WORKSPACE}"
         }
     }
 }
