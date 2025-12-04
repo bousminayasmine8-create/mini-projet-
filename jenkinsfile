@@ -4,7 +4,7 @@ pipeline {
     environment {
         MAVEN_HOME = "/usr/share/maven"
         JAVA_HOME  = "/usr/lib/jvm/java-17-openjdk-amd64"
-        SONAR_TOKEN = credentials('mini-projet-token')
+        SONAR_TOKEN = credentials('Token SonarQube pour CI/CD')
     }
 
     stages {
@@ -32,12 +32,12 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh "${MAVEN_HOME}/bin/mvn sonar:sonar -Dsonar.token=${SONAR_TOKEN}"
-                }
-            }
+    steps {
+        withSonarQubeEnv('SonarQube') {
+            sh "${MAVEN_HOME}/bin/mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
         }
+    }
+}
 
         stage('Package') {
             steps {
