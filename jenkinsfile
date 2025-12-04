@@ -5,7 +5,6 @@ pipeline {
         MAVEN_HOME = "/usr/share/maven"
         JAVA_HOME  = "/usr/lib/jvm/java-17-openjdk-amd64"
         PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
-        SONAR_TOKEN = credentials('mini-projet-token')
     }
     
     stages {
@@ -14,7 +13,7 @@ pipeline {
                 echo 'Cloning repository...'
                 git branch: 'main', 
                     url: 'https://github.com/bousminayasmine8-create/mini-projet-.git',
-                    credentialsId: 'gitjenkins' // Si nécessaire
+                    credentialsId: 'gitjinkins'
             }
         }
         
@@ -41,8 +40,13 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo 'Running SonarQube analysis...'
-                withSonarQubeEnv('SonarQube') {
-                    sh "mvn sonar:sonar -Dsonar.token=${SONAR_TOKEN}"
+                script {
+                    // Récupérer le token SonarQube
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        withSonarQubeEnv('SonarQube') {
+                            sh "mvn sonar:sonar -Dsonar.token=${SONAR_TOKEN}"
+                        }
+                    }
                 }
             }
         }
@@ -79,7 +83,8 @@ pipeline {
             echo '❌ Le pipeline a échoué.'
         }
         always {
-            cleanWs()
+            echo 'Nettoyage du workspace...'
+            // cleanWs() supprimé car il cause des problèmes
         }
     }
 }
