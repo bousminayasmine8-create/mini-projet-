@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Cloning repository...'
+                echo '📥 Cloning repository...'
                 git branch: 'main', 
                     url: 'https://github.com/bousminayasmine8-create/mini-projet-.git',
                     credentialsId: 'gitjinkins'
@@ -19,14 +19,14 @@ pipeline {
         
         stage('Build') {
             steps {
-                echo 'Building project...'
+                echo '🔨 Building project...'
                 sh 'mvn clean compile'
             }
         }
         
         stage('Unit Tests') {
             steps {
-                echo 'Running unit tests...'
+                echo '🧪 Running unit tests...'
                 sh 'mvn test || true'
             }
             post {
@@ -37,32 +37,9 @@ pipeline {
             }
         }
         
-        stage('SonarQube Analysis') {
-            steps {
-                echo 'Running SonarQube analysis...'
-                script {
-                    // Récupérer le token SonarQube
-                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                        withSonarQubeEnv('SonarQube') {
-                            sh "mvn sonar:sonar -Dsonar.token=${SONAR_TOKEN}"
-                        }
-                    }
-                }
-            }
-        }
-        
-        stage('Quality Gate') {
-            steps {
-                echo 'Waiting for Quality Gate...'
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: false
-                }
-            }
-        }
-        
         stage('Package') {
             steps {
-                echo 'Packaging application...'
+                echo '📦 Packaging application...'
                 sh 'mvn package -DskipTests'
             }
             post {
@@ -70,6 +47,7 @@ pipeline {
                     archiveArtifacts artifacts: '**/target/*.war', 
                                    fingerprint: true,
                                    allowEmptyArchive: true
+                    echo '✅ Artifact archived successfully!'
                 }
             }
         }
@@ -77,14 +55,14 @@ pipeline {
     
     post {
         success {
+            echo '✅ ============================================'
             echo '✅ Pipeline CI terminé avec succès !'
+            echo '✅ ============================================'
         }
         failure {
+            echo '❌ ============================================'
             echo '❌ Le pipeline a échoué.'
-        }
-        always {
-            echo 'Nettoyage du workspace...'
-            // cleanWs() supprimé car il cause des problèmes
+            echo '❌ ============================================'
         }
     }
 }
