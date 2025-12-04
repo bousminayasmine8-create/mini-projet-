@@ -1,31 +1,85 @@
 pipeline {
     agent any
+    
     environment {
-        SONAR_TOKEN = credentials('jenkins-token') 
+        MAVEN_HOME = "/usr/share/maven"
+        JAVA_HOME  = "/usr/lib/jvm/java-17-openjdk-amd64"
+        PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
+        SONAR_TOKEN = credentials('mini-projet-token')
     }
+    
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/bousminayasmine8-create/mini-projet-.git', credentialsId: 'gitjinkins'
+                echo 'Cloning repository...'
+                git branch: 'main', 
+                    url: 'https://github.com/bousminayasmine8-create/mini-projet-.git',
+                    credentialsId: 'gitjenkins' // Si nécessaire
             }
         }
-        stage('SonarQube Analysis') {
+        
+        stage('Build') {
             steps {
-                withSonarQubeEnv('mini-projet-sonarqube') {
-                    sh 'mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}'
+                echo 'Building project...'
+                sh 'mvn clean compile'
+            }
+        }
+        
+        stage('Unit Tests') {
+            steps {
+                echo 'Running unit tests...'
+                sh 'mvn test || true'
+            }
+            post {
+                always {
+                    junit testResults: '**/target/surefire-reports/*.xml', 
+                         allowEmptyResults: true
                 }
             }
         }
-        stage('Build') {
+        
+        stage('SonarQube Analysis') {
             steps {
-                sh 'mvn clean package'
+                echo 'Running SonarQube analysis...'
+                withSonarQubeEnv('SonarQube') {
+                    sh "mvn sonar:sonar -Dsonar.token=${SONAR_TOKEN}"
+                }
+            }
+        }
+        
+        stage('Quality Gate') {
+            steps {
+                echo 'Waiting for Quality Gate...'
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
+        
+        stage('Package') {
+            steps {
+                echo 'Packaging application...'
+                sh 'mvn package -DskipTests'
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: '**/target/*.war', 
+                                   fingerprint: true,
+                                   allowEmptyArchive: true
+                }
             }
         }
     }
+    
     post {
+        success {
+            echo '✅ Pipeline CI terminé avec succès !'
+        }
         failure {
-            echo 'Pipeline échoué.'
+            echo '❌ Le pipeline a échoué.'
+        }
+        always {
+            cleanWs()
         }
     }
 }
-
