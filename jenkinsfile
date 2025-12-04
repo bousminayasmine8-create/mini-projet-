@@ -37,6 +37,20 @@ pipeline {
             }
         }
         
+        stage('SonarQube Analysis') {
+            steps {
+                echo '🔍 Running SonarQube analysis...'
+                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                    sh """
+                        mvn sonar:sonar \
+                        -Dsonar.projectKey=mini-projet \
+                        -Dsonar.host.url=http://localhost:9000 \
+                        -Dsonar.login=\${SONAR_TOKEN}
+                    """
+                }
+            }
+        }
+        
         stage('Package') {
             steps {
                 echo '📦 Packaging application...'
@@ -57,6 +71,8 @@ pipeline {
         success {
             echo '✅ =========================================='
             echo '✅ Pipeline terminé avec succès !'
+            echo '✅ Vérifiez les résultats dans SonarQube:'
+            echo '✅ http://localhost:9000/dashboard?id=mini-projet'
             echo '✅ =========================================='
         }
         failure {
