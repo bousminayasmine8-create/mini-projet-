@@ -4,17 +4,13 @@ pipeline {
     environment {
         MAVEN_HOME = "/usr/share/maven"
         JAVA_HOME  = "/usr/lib/jvm/java-17-openjdk-amd64"
-        SONAR_TOKEN = credentials('mini-projet-token') // token SonarQube
-        DEPLOY_USER = 'devops'                          // utilisateur sur VM_DEV
-        DEPLOY_HOST = '192.168.100.130'                // IP de VM_DEV
-        DEPLOY_PATH = '/home/devops/jenkins/app'       // chemin où déployer l'appli
-        SSH_KEY_CREDENTIALS = 'vm-devops'             // clé SSH stockée dans Jenkins
+        SONAR_TOKEN = credentials('mini-projet-token') 
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://ton-repo-git.git'
+                git branch: 'main', url: 'https://github.com/bousminayasmine8-create/mini-projet-.git'
             }
         }
 
@@ -38,7 +34,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh "${MAVEN_HOME}/bin/mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
+                      sh "${MAVEN_HOME}/bin/mvn sonar:sonar -Dsonar.token=squ_a2b21ad78c687716ea63aef99505353b33e8f30d"
                 }
             }
         }
@@ -49,19 +45,7 @@ pipeline {
             }
             post {
                 success {
-                    archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
-                }
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                sshagent([SSH_KEY_CREDENTIALS]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} 'mkdir -p ${DEPLOY_PATH}'
-                        scp target/*.jar ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
-                        ssh ${DEPLOY_USER}@${DEPLOY_HOST} 'cd ${DEPLOY_PATH} && java -jar *.jar > app.log 2>&1 &'
-                    """
+                    archiveArtifacts artifacts: '**/target/*.war', fingerprint: true
                 }
             }
         }
@@ -69,10 +53,11 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline CI/CD terminé avec succès ! L’application est déployée.'
+            echo 'Pipeline CI terminé avec succès !'
         }
         failure {
             echo 'Le pipeline a échoué.'
         }
     }
 }
+
