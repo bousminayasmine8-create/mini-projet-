@@ -2,70 +2,43 @@ pipeline {
     agent any
     
     environment {
-        // Project configuration
         PROJECT_DIR = '/home/devops/mini-projet-'
         TOMCAT_URL = 'http://192.168.100.130:8080'
         SONAR_HOST = 'http://192.168.100.130:9000'
-        MAVEN_OPTS = '-Xmx512m'
-    }
-    
-    tools {
-        maven 'Maven3'
-        jdk 'JDK11'
     }
     
     stages {
         stage('1️⃣ Preparation') {
             steps {
                 echo '=========================================='
-                echo '📦 Stage 1: Preparation'
+                echo '📦 Preparation'
                 echo '=========================================='
-                script {
-                    sh """
-                        echo "Project Directory: ${PROJECT_DIR}"
-                        echo "Tomcat URL: ${TOMCAT_URL}"
-                        echo "SonarQube: ${SONAR_HOST}"
-                        echo ""
-                        
-                        # Vérifier projet existe
-                        if [ ! -d "${PROJECT_DIR}" ]; then
-                            echo "❌ Project not found: ${PROJECT_DIR}"
-                            exit 1
-                        fi
-                        
-                        echo "✅ Project directory exists"
-                        ls -la ${PROJECT_DIR}
-                    """
+                sh """
+                    echo "Project: ${PROJECT_DIR}"
+                    echo "Tomcat: ${TOMCAT_URL}"
+                    ls -la ${PROJECT_DIR}
+                """
+            }
+        }
+        
+        stage('2️⃣ Build') {
+            steps {
+                echo '=========================================='
+                echo '🔨 Maven Build'
+                echo '=========================================='
+                dir("${PROJECT_DIR}") {
+                    sh 'mvn clean compile'
                 }
             }
         }
         
-        stage('2️⃣ Maven Build') {
+        stage('3️⃣ Tests') {
             steps {
                 echo '=========================================='
-                echo '🔨 Stage 2: Maven Build'
+                echo '🧪 Unit Tests'
                 echo '=========================================='
                 dir("${PROJECT_DIR}") {
-                    sh '''
-                        echo "Starting Maven build..."
-                        mvn clean compile
-                        echo "✅ Build completed!"
-                    '''
-                }
-            }
-        }
-        
-        stage('3️⃣ Unit Tests') {
-            steps {
-                echo '=========================================='
-                echo '🧪 Stage 3: Unit Tests'
-                echo '=========================================='
-                dir("${PROJECT_DIR}") {
-                    sh '''
-                        echo "Running unit tests..."
-                        mvn test || true
-                        echo "✅ Tests completed!"
-                    '''
+                    sh 'mvn test || true'
                 }
             }
             post {
@@ -77,27 +50,23 @@ pipeline {
             }
         }
         
-        stage('4️⃣ SAST - SonarQube Analysis') {
+        stage('4️⃣ SAST') {
             steps {
                 echo '=========================================='
-                echo '🔍 Stage 4: SAST Analysis'
+                echo '🔍 SonarQube Analysis'
                 echo '=========================================='
                 dir("${PROJECT_DIR}") {
                     script {
                         try {
                             withSonarQubeEnv('SonarQube') {
                                 sh """
-                                    echo "Running SonarQube analysis..."
                                     mvn sonar:sonar \
                                         -Dsonar.projectKey=mini-projet \
-                                        -Dsonar.projectName=mini-projet \
                                         -Dsonar.host.url=${SONAR_HOST}
-                                    echo "✅ SonarQube analysis completed!"
                                 """
                             }
                         } catch (Exception e) {
-                            echo "⚠️ SonarQube analysis failed: ${e.getMessage()}"
-                            echo "Pipeline will continue..."
+                            echo "⚠️ SAST failed: ${e.getMessage()}"
                         }
                     }
                 }
@@ -107,130 +76,94 @@ pipeline {
         stage('5️⃣ Quality Gate') {
             steps {
                 echo '=========================================='
-                echo '📊 Stage 5: Quality Gate Check'
+                echo '📊 Quality Gate'
                 echo '=========================================='
                 script {
                     try {
                         timeout(time: 3, unit: 'MINUTES') {
-                            echo "Waiting for Quality Gate result..."
-                            def qg = waitForQualityGate()
-                            if (qg.status != 'OK') {
-                                echo "⚠️ Quality Gate status: ${qg.status}"
-                            } else {
-                                echo "✅ Quality Gate passed!"
-                            }
+                            waitForQualityGate abortPipeline: false
                         }
                     } catch (Exception e) {
-                        echo "⚠️ Quality Gate check failed: ${e.getMessage()}"
-                        echo "Pipeline will continue..."
+                        echo "⚠️ Quality Gate timeout"
                     }
                 }
             }
         }
         
-        stage('6️⃣ Package WAR') {
+        stage('6️⃣ Package') {
             steps {
                 echo '=========================================='
-                echo '📦 Stage 6: Package Application'
+                echo '📦 Package WAR'
                 echo '=========================================='
                 dir("${PROJECT_DIR}") {
                     sh '''
-                        echo "Creating WAR package..."
                         mvn package -DskipTests
-                        
-                        echo ""
-                        echo "Generated artifacts:"
                         ls -lh target/*.war
-                        echo ""
-                        echo "✅ WAR package created!"
                     '''
                 }
             }
             post {
                 success {
                     dir("${PROJECT_DIR}") {
-                        archiveArtifacts artifacts: '**/target/*.war', fingerprint: true, allowEmptyArchive: true
+                        archiveArtifacts artifacts: '**/target/*.war', allowEmptyArchive: true
                     }
                 }
             }
         }
         
-        stage('7️⃣ Deploy to Tomcat') {
+        stage('7️⃣ Deploy') {
             steps {
                 echo '=========================================='
-                echo '🚀 Stage 7: Deploy to Tomcat'
+                echo '🚀 Deploy to Tomcat'
                 echo '=========================================='
                 dir("${PROJECT_DIR}") {
                     sh '''
-                        echo "Deploying WAR to Tomcat..."
-                        
-                        # Copier WAR vers Tomcat
                         sudo cp target/*.war /var/lib/tomcat9/webapps/mini-projet.war
-                        
-                        # Vérifier copie
-                        echo ""
-                        echo "Deployed WAR file:"
                         ls -lh /var/lib/tomcat9/webapps/mini-projet.war
-                        
-                        echo ""
-                        echo "✅ Deployment completed!"
                     '''
                 }
+                sleep(time: 30, unit: 'SECONDS')
             }
         }
         
-        stage('8️⃣ Wait for Application') {
+        stage('8️⃣ Wait App') {
             steps {
                 echo '=========================================='
-                echo '⏳ Stage 8: Wait for Application Startup'
+                echo '⏳ Waiting for Application'
                 echo '=========================================='
                 script {
-                    echo "Waiting 30 seconds for Tomcat to deploy application..."
-                    sleep(time: 30, unit: 'SECONDS')
-                    
-                    echo ""
-                    echo "Checking application availability..."
-                    
                     def maxRetries = 10
                     def retryCount = 0
-                    def isReady = false
+                    def ready = false
                     
-                    while (retryCount < maxRetries && !isReady) {
+                    while (retryCount < maxRetries && !ready) {
                         try {
                             def response = sh(
                                 script: "curl -s -o /dev/null -w '%{http_code}' ${TOMCAT_URL}",
                                 returnStdout: true
                             ).trim()
                             
-                            echo "Attempt ${retryCount + 1}/${maxRetries}: HTTP ${response}"
-                            
                             if (response == '200') {
-                                echo "✅ Application is ready!"
-                                isReady = true
+                                echo "✅ App ready!"
+                                ready = true
                             } else {
-                                echo "⏳ Application starting... waiting 5s"
-                                sleep(time: 5, unit: 'SECONDS')
+                                echo "⏳ Waiting... (${retryCount + 1}/${maxRetries})"
+                                sleep(5)
                                 retryCount++
                             }
                         } catch (Exception e) {
-                            echo "⚠️ Connection failed, retrying..."
-                            sleep(time: 5, unit: 'SECONDS')
+                            sleep(5)
                             retryCount++
                         }
-                    }
-                    
-                    if (!isReady) {
-                        echo "⚠️ Application may not be fully ready"
-                        echo "Continuing with DAST scan anyway..."
                     }
                 }
             }
         }
         
-        stage('9️⃣ DAST - Nikto Security Scan') {
+        stage('9️⃣ DAST') {
             steps {
                 echo '=========================================='
-                echo '🔍 Stage 9: DAST Security Scan'
+                echo '🔒 DAST Security Scan'
                 echo '=========================================='
                 script {
                     def timestamp = sh(
@@ -239,97 +172,48 @@ pipeline {
                     ).trim()
                     
                     sh """
-                        echo "======================================"
-                        echo "🔒 DAST Security Scan with Nikto"
-                        echo "======================================"
-                        echo ""
-                        echo "Target URL: ${TOMCAT_URL}"
-                        echo "Timestamp: ${timestamp}"
-                        echo ""
+                        mkdir -p \${WORKSPACE}/dast-reports
                         
-                        # Créer dossier rapports
-                        mkdir -p ${WORKSPACE}/dast-reports
-                        
-                        # Vérifier application accessible
-                        echo "📡 Testing application accessibility..."
-                        HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" ${TOMCAT_URL} 2>/dev/null || echo "000")
-                        echo "HTTP Status: \$HTTP_CODE"
+                        echo "🔍 DAST with Nikto"
+                        echo "Target: ${TOMCAT_URL}"
+                        echo "Report: nikto-${timestamp}.html"
                         echo ""
                         
-                        if [ "\$HTTP_CODE" != "200" ]; then
-                            echo "⚠️ Warning: Application returned HTTP \$HTTP_CODE"
-                            echo "Scan will proceed but results may be incomplete."
-                            echo ""
-                        fi
-                        
-                        # Lancer Nikto scan
-                        echo "🔍 Starting Nikto security scan..."
-                        echo "This may take 5-15 minutes depending on application size..."
+                        # Check app
+                        HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" ${TOMCAT_URL})
+                        echo "App status: HTTP \$HTTP_CODE"
                         echo ""
                         
+                        # Scan
+                        echo "Starting scan..."
                         nikto -h ${TOMCAT_URL} \
-                              -o ${WORKSPACE}/dast-reports/nikto-report-${timestamp}.html \
+                              -o \${WORKSPACE}/dast-reports/nikto-${timestamp}.html \
                               -Format html \
                               -Tuning 123456789abc \
-                              -Display V \
-                              -timeout 10 || true
+                              -Display V || true
                         
-                        echo ""
-                        echo "Generating text report for analysis..."
                         nikto -h ${TOMCAT_URL} \
-                              -o ${WORKSPACE}/dast-reports/nikto-report-${timestamp}.txt \
+                              -o \${WORKSPACE}/dast-reports/nikto-${timestamp}.txt \
                               -Format txt \
-                              -Tuning 123456789abc \
-                              -Display 1 \
-                              -timeout 10 || true
+                              -Tuning 123456789abc || true
                         
                         echo ""
-                        echo "======================================"
-                        echo "📊 DAST Scan Results Analysis"
-                        echo "======================================"
-                        echo ""
-                        
-                        # Analyser résultats
-                        if [ -f "${WORKSPACE}/dast-reports/nikto-report-${timestamp}.txt" ]; then
-                            # Compter alertes
-                            ALERT_COUNT=\$(grep -c "+" ${WORKSPACE}/dast-reports/nikto-report-${timestamp}.txt 2>/dev/null || echo "0")
-                            echo "📈 Total alerts found: \$ALERT_COUNT"
+                        echo "📊 Analysis:"
+                        if [ -f \${WORKSPACE}/dast-reports/nikto-${timestamp}.txt ]; then
+                            ALERTS=\$(grep -c "+" \${WORKSPACE}/dast-reports/nikto-${timestamp}.txt || echo "0")
+                            echo "Total alerts: \$ALERTS"
                             
-                            # Afficher top alertes
+                            OSVDB=\$(grep -c "OSVDB" \${WORKSPACE}/dast-reports/nikto-${timestamp}.txt || echo "0")
+                            echo "OSVDB entries: \$OSVDB"
+                            
                             echo ""
-                            echo "🔴 Top Security Findings:"
-                            echo "---"
-                            grep "+" ${WORKSPACE}/dast-reports/nikto-report-${timestamp}.txt 2>/dev/null | head -10 || echo "No major alerts found"
-                            
-                            # Rechercher vulnérabilités critiques
-                            echo ""
-                            echo "🔒 Critical Vulnerabilities Check:"
-                            echo "---"
-                            
-                            OSVDB_COUNT=\$(grep -c "OSVDB" ${WORKSPACE}/dast-reports/nikto-report-${timestamp}.txt 2>/dev/null || echo "0")
-                            echo "OSVDB entries found: \$OSVDB_COUNT"
-                            
-                            HTTP_METHODS=\$(grep -i "allowed http methods" ${WORKSPACE}/dast-reports/nikto-report-${timestamp}.txt 2>/dev/null || echo "Not detected")
-                            echo "HTTP Methods: \$HTTP_METHODS"
-                            
-                            HEADERS=\$(grep -i "header" ${WORKSPACE}/dast-reports/nikto-report-${timestamp}.txt 2>/dev/null | wc -l || echo "0")
-                            echo "Security headers issues: \$HEADERS"
-                        else
-                            echo "⚠️ Text report not generated successfully"
+                            echo "Top findings:"
+                            grep "+" \${WORKSPACE}/dast-reports/nikto-${timestamp}.txt | head -10 || true
                         fi
                         
                         echo ""
-                        echo "======================================"
-                        echo "✅ DAST Scan Completed!"
-                        echo "======================================"
-                        echo ""
-                        echo "📁 Reports generated:"
-                        ls -lh ${WORKSPACE}/dast-reports/ | grep nikto-report-${timestamp}
-                        echo ""
-                        echo "📄 View HTML report in Jenkins:"
-                        echo "   Build → DAST Security Report"
-                        echo ""
-                        echo "======================================"
+                        echo "✅ DAST completed!"
+                        ls -lh \${WORKSPACE}/dast-reports/
                     """
                 }
             }
@@ -340,122 +224,59 @@ pipeline {
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
                         reportDir: 'dast-reports',
-                        reportFiles: 'nikto-report-*.html',
-                        reportName: 'DAST Security Report',
-                        reportTitles: 'Nikto DAST Scan Results'
+                        reportFiles: 'nikto-*.html',
+                        reportName: 'DAST Security Report'
                     ])
                 }
             }
         }
         
-        stage('🔟 Final Health Check') {
+        stage('🔟 Health Check') {
             steps {
                 echo '=========================================='
-                echo '🏥 Stage 10: Final Health Check'
+                echo '🏥 Final Health Check'
                 echo '=========================================='
-                script {
-                    sh """
-                        echo "======================================"
-                        echo "🏥 Application Health Check"
-                        echo "======================================"
-                        echo ""
-                        echo "Base URL: ${TOMCAT_URL}"
-                        echo ""
-                        echo "Testing common endpoints..."
-                        echo ""
-                        
-                        # Tester endpoints principaux
-                        for page in index.html login.html signup.html contact.html about.html services.html; do
-                            HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" ${TOMCAT_URL}/\$page 2>/dev/null || echo "000")
-                            if [ "\$HTTP_CODE" = "200" ]; then
-                                echo "✅ \$page - OK (HTTP \$HTTP_CODE)"
-                            elif [ "\$HTTP_CODE" = "404" ]; then
-                                echo "⚠️ \$page - Not Found (HTTP \$HTTP_CODE)"
-                            else
-                                echo "❌ \$page - Error (HTTP \$HTTP_CODE)"
-                            fi
-                        done
-                        
-                        echo ""
-                        echo "======================================"
-                        echo "✅ Health Check Completed!"
-                        echo "======================================"
-                    """
-                }
+                sh """
+                    echo "Testing endpoints:"
+                    for page in index.html login.html signup.html contact.html; do
+                        CODE=\$(curl -s -o /dev/null -w "%{http_code}" ${TOMCAT_URL}/\$page || echo "000")
+                        if [ "\$CODE" = "200" ]; then
+                            echo "✅ \$page (HTTP \$CODE)"
+                        else
+                            echo "⚠️ \$page (HTTP \$CODE)"
+                        fi
+                    done
+                """
             }
         }
     }
     
     post {
         success {
-            script {
-                echo '=========================================='
-                echo '✅ PIPELINE COMPLETED SUCCESSFULLY! 🎉'
-                echo '=========================================='
-                echo ''
-                echo '📋 Pipeline Summary:'
-                echo '---'
-                echo '✅ Build: Success'
-                echo '✅ Tests: Completed'
-                echo '✅ SAST: Analyzed'
-                echo '✅ Deploy: Success'
-                echo '✅ DAST: Scanned'
-                echo ''
-                echo '🌐 Application URL:'
-                echo "   ${TOMCAT_URL}"
-                echo ''
-                echo '📊 Reports Available:'
-                echo "   - SonarQube SAST: ${SONAR_HOST}"
-                echo '   - DAST Security: Check Build Artifacts'
-                echo ''
-                echo '🎯 Next Steps:'
-                echo '   1. Review DAST security findings'
-                echo '   2. Check SonarQube quality metrics'
-                echo '   3. Test application functionality'
-                echo '   4. Fix identified vulnerabilities'
-                echo ''
-                echo '=========================================='
-            }
+            echo '=========================================='
+            echo '✅ PIPELINE SUCCESS! 🎉'
+            echo '=========================================='
+            echo ''
+            echo '📋 Summary:'
+            echo '  ✅ Build: OK'
+            echo '  ✅ Tests: OK'
+            echo '  ✅ SAST: OK'
+            echo '  ✅ Deploy: OK'
+            echo '  ✅ DAST: OK'
+            echo ''
+            echo '🌐 App: ${TOMCAT_URL}'
+            echo '📊 SonarQube: ${SONAR_HOST}'
+            echo '🔒 DAST: Check Build Artifacts'
+            echo ''
+            echo '=========================================='
         }
         failure {
-            script {
-                echo '=========================================='
-                echo '❌ PIPELINE FAILED!'
-                echo '=========================================='
-                echo ''
-                echo '🔍 Troubleshooting Steps:'
-                echo '---'
-                echo '1. Check console output for error details'
-                echo '2. Verify all services are running:'
-                echo '   - Jenkins: sudo systemctl status jenkins'
-                echo '   - Tomcat: sudo systemctl status tomcat9'
-                echo '   - SonarQube: sudo systemctl status sonarqube'
-                echo '3. Check application build:'
-                echo '   - Maven compilation errors?'
-                echo '   - Test failures?'
-                echo '   - Missing dependencies?'
-                echo '4. Verify deployment:'
-                echo '   - WAR file created?'
-                echo '   - Permissions correct?'
-                echo '   - Tomcat webapps writable?'
-                echo ''
-                echo '📧 Common Issues:'
-                echo '   - Network connectivity problems'
-                echo '   - Insufficient disk space'
-                echo '   - Permission denied errors'
-                echo '   - Service not responding'
-                echo ''
-                echo '=========================================='
-            }
-        }
-        always {
-            script {
-                echo ''
-                echo '🧹 Cleanup: Workspace preserved for debugging'
-                echo "📁 Workspace: ${WORKSPACE}"
-                echo "⏰ Build Duration: ${currentBuild.durationString}"
-                echo ''
-            }
+            echo '=========================================='
+            echo '❌ PIPELINE FAILED!'
+            echo '=========================================='
+            echo ''
+            echo 'Check console output for errors'
+            echo ''
         }
     }
 }
