@@ -2,204 +2,62 @@ pipeline {
     agent any
     
     environment {
-        MAVEN_HOME = "/usr/share/maven"
-        JAVA_HOME  = "/usr/lib/jvm/java-17-openjdk-amd64"
-        PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
-        
-        // Configuration Tomcat
-        TOMCAT_URL = "http://192.168.100.130:8080"
-        APP_NAME = "mini-projet"
+        TOMCAT_URL = 'http://192.168.100.130:8080'
+        SONAR_HOST = 'http://192.168.100.130:9000'
     }
     
     stages {
-        stage('Checkout') {
-            steps {
-                echo '📥 Récupération du code source...'
-                git branch: 'main', 
-                    url: 'https://github.com/bousminayasmine8-create/mini-projet-.git',
-                    credentialsId: 'gitjinkins'
-            }
-        }
-        
         stage('Build') {
             steps {
-                echo '🔨 Compilation du projet...'
-                sh 'mvn clean compile'
+                echo '🔨 Building...'
+                sh 'mvn clean package -DskipTests'
             }
         }
         
-        stage('Unit Tests') {
+        stage('Tests') {
             steps {
-                echo '🧪 Exécution des tests unitaires...'
-                sh 'mvn test || true'
+                echo '🧪 Testing...'
+                sh 'mvn test'
+            }
+        }
+        
+        stage('SAST - SonarQube') {
+            steps {
+                echo '🔍 SAST Analysis...'
+                withSonarQubeEnv('SonarQube') {
+                    sh 'mvn sonar:sonar -Dsonar.projectKey=mini-projet'
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                echo '🚀 Deploying...'
+                sh 'sudo cp target/*.war /var/lib/tomcat9/webapps/mini-projet.war'
+                sleep(time: 30, unit: 'SECONDS')
+            }
+        }
+        
+        stage('DAST - Nikto') {
+            steps {
+                echo '🔍 DAST Scan...'
+                sh '''
+                    mkdir -p dast-reports
+                    nikto -h ${TOMCAT_URL} \
+                          -o dast-reports/nikto-report.html \
+                          -Format html \
+                          -Tuning 123456789abc || true
+                '''
             }
             post {
                 always {
-                    junit testResults: '**/target/surefire-reports/*.xml', 
-                         allowEmptyResults: true
+                    publishHTML([
+                        reportDir: 'dast-reports',
+                        reportFiles: 'nikto-report.html',
+                        reportName: 'DAST Report'
+                    ])
                 }
             }
-        }
-        
-        stage('SonarQube Analysis') {
-            steps {
-                echo '🔍 Analyse SonarQube...'
-                script {
-                    try {
-                        timeout(time: 30, unit: 'SECONDS') {
-                            sh 'curl -f http://localhost:9000/api/system/status'
-                            echo '✅ SonarQube accessible !'
-                            
-                            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                                timeout(time: 3, unit: 'MINUTES') {
-                                    sh """
-                                        mvn sonar:sonar \
-                                        -Dsonar.projectKey=mini-projet \
-                                        -Dsonar.host.url=http://localhost:9000 \
-                                        -Dsonar.login=\${SONAR_TOKEN}
-                                    """
-                                }
-                            }
-                            echo '✅ Analyse SonarQube terminée !'
-                        }
-                    } catch (Exception e) {
-                        echo "⚠️ SonarQube ignoré: ${e.message}"
-                        echo "⏭️ Suite du pipeline..."
-                    }
-                }
-            }
-        }
-        
-        stage('Package') {
-            steps {
-                echo '📦 Création du fichier WAR...'
-                sh 'mvn package -DskipTests'
-            }
-            post {
-                success {
-                    archiveArtifacts artifacts: '**/target/*.war', 
-                                   fingerprint: true
-                    script {
-                        def warFile = sh(
-                            script: "find target -name '*.war' | head -1", 
-                            returnStdout: true
-                        ).trim()
-                        echo "✅ Fichier WAR créé: ${warFile}"
-                    }
-                }
-            }
-        }
-        
-        stage('Stop Old Application') {
-            steps {
-                echo '🛑 Arrêt de l\'ancienne version...'
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'tomcat-credentials', 
-                        usernameVariable: 'TOMCAT_USER', 
-                        passwordVariable: 'TOMCAT_PASS'
-                    )]) {
-                        sh """
-                            curl -s --user \${TOMCAT_USER}:\${TOMCAT_PASS} \
-                            "${TOMCAT_URL}/manager/text/undeploy?path=/${APP_NAME}" || true
-                            
-                            curl -s --user \${TOMCAT_USER}:\${TOMCAT_PASS} \
-                            "${TOMCAT_URL}/manager/text/undeploy?path=/mini-projet-1.0.0-SNAPSHOT" || true
-                        """
-                        echo '✅ Anciennes versions supprimées'
-                    }
-                }
-            }
-        }
-        
-        stage('Deploy to Tomcat') {
-            steps {
-                echo '🚀 Déploiement sur Tomcat...'
-                script {
-                    def warFile = sh(
-                        script: "find target -name '*.war' | head -1", 
-                        returnStdout: true
-                    ).trim()
-                    
-                    echo "📦 Déploiement de: ${warFile}"
-                    
-                    withCredentials([usernamePassword(
-                        credentialsId: 'tomcat-credentials', 
-                        usernameVariable: 'TOMCAT_USER', 
-                        passwordVariable: 'TOMCAT_PASS'
-                    )]) {
-                        def response = sh(
-                            script: """
-                                curl -s --upload-file ${warFile} \
-                                --user \${TOMCAT_USER}:\${TOMCAT_PASS} \
-                                "${TOMCAT_URL}/manager/text/deploy?path=/${APP_NAME}&update=true"
-                            """,
-                            returnStdout: true
-                        ).trim()
-                        
-                        echo "📋 Réponse Tomcat: ${response}"
-                        
-                        if (response.contains('OK')) {
-                            echo '✅ Déploiement réussi !'
-                        } else {
-                            echo "⚠️ Réponse: ${response}"
-                        }
-                    }
-                }
-            }
-        }
-        
-        stage('Verify Deployment') {
-            steps {
-                echo '🔍 Vérification du déploiement...'
-                script {
-                    echo '⏳ Attente du démarrage (10 secondes)...'
-                    sleep(time: 10, unit: 'SECONDS')
-                    
-                    def statusCode = sh(
-                        script: "curl -s -o /dev/null -w '%{http_code}' ${TOMCAT_URL}/${APP_NAME}/",
-                        returnStdout: true
-                    ).trim()
-                    
-                    echo "📊 Code HTTP: ${statusCode}"
-                    
-                    if (statusCode == '200' || statusCode == '302' || statusCode == '303') {
-                        echo '✅ Application accessible et fonctionnelle !'
-                    } else {
-                        echo "⚠️ Code HTTP ${statusCode}"
-                    }
-                }
-            }
-        }
-    }
-    
-    post {
-        success {
-            echo ''
-            echo '🎉 ================================================'
-            echo '🎉       DÉPLOIEMENT RÉUSSI !'
-            echo '🎉 ================================================'
-            echo ''
-            echo '🌐 Votre application est accessible sur:'
-            echo "   ${TOMCAT_URL}/${APP_NAME}/"
-            echo "   ${TOMCAT_URL}/${APP_NAME}/about.html"
-            echo ''
-            echo '📊 Autres liens:'
-            echo "   - SonarQube: http://localhost:9000/dashboard?id=mini-projet"
-            echo "   - Tomcat Manager: ${TOMCAT_URL}/manager/html"
-            echo "   - Jenkins: http://192.168.100.130:8081/job/projet/"
-            echo ''
-            echo '🎉 ================================================'
-        }
-        failure {
-            echo ''
-            echo '❌ ================================================'
-            echo '❌         ÉCHEC DU DÉPLOIEMENT'
-            echo '❌ ================================================'
-        }
-        always {
-            echo ''
-            echo '📊 Build #${BUILD_NUMBER}'
         }
     }
 }
